@@ -21,8 +21,11 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - task: Docker@2
+      displayName: Build an image
       inputs:
         containerRegistry: 'github-docker-blazor'
         repository: '$(Build.SourcesDirectory)/src'
         command: 'buildAndPush'
         Dockerfile: '$(Build.SourcesDirectory)/src/Dockerfile'
+        tags: |
+          $(tag)

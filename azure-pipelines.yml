@@ -26,6 +26,3 @@ stages:
         repository: '$(Build.SourcesDirectory)/src'
         command: 'buildAndPush'
         Dockerfile: '$(Build.SourcesDirectory)/src/Dockerfile'
-        tags: |
-          $(Build.BuildId)
-          latest

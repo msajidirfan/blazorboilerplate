@@ -1,11 +1,14 @@
-﻿using BlazorBoilerplate.Server.Helpers;
+﻿using BlazorBoilerplate.Server.Data;
+using BlazorBoilerplate.Server.Helpers;
 using BlazorBoilerplate.Server.Middleware.Wrappers;
 using BlazorBoilerplate.Server.Models;
 using BlazorBoilerplate.Server.Services;
+using BlazorBoilerplate.Shared.AuthorizationDefinitions;
 using BlazorBoilerplate.Shared.Dto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -30,8 +33,9 @@ namespace BlazorBoilerplate.Server.Controllers
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly ApplicationDbContext _db;
 
-        public AccountController(UserManager<ApplicationUser> userManager,
+        public AccountController(UserManager<ApplicationUser> userManager, ApplicationDbContext db,
             SignInManager<ApplicationUser> signInManager, ILogger<AccountController> logger,
             RoleManager<IdentityRole<Guid>> roleManager, IEmailService emailService, IConfiguration configuration)
         {
@@ -41,25 +45,7 @@ namespace BlazorBoilerplate.Server.Controllers
             _roleManager = roleManager;
             _emailService = emailService;
             _configuration = configuration;
-        }
-
-        [HttpGet("GetUser")]
-        [Authorize]
-        public ApiResponse GetUser()
-        {
-            UserInfoDto userInfo = User != null && User.Identity.IsAuthenticated
-                ? new UserInfoDto { UserName = User.Identity.Name, IsAuthenticated = true }
-                : LoggedOutUser;
-            return new ApiResponse(200, "Get User Successful", userInfo);
-        }
-
-        [Authorize]
-        // GET: api/Account/User
-        [HttpGet]
-        public async Task<ApiResponse> Get()
-        {
-            var users = _userManager.Users;
-            return new ApiResponse(200, "Get User Successful", users);
+            _db = db;
         }
 
         // POST: api/Account/Login
@@ -119,20 +105,6 @@ namespace BlazorBoilerplate.Server.Controllers
                     return new ApiResponse(400, "User Model is Invalid");
                 }
 
-                // https://gooroo.io/GoorooTHINK/Article/17333/Custom-user-roles-and-rolebased-authorization-in-ASPNET-core/32835
-                string[] roleNames = { "SuperAdmin", "Admin", "User" };
-                IdentityResult roleResult;
-
-                foreach (var roleName in roleNames)
-                {
-                    //creating the roles and seeding them to the database
-                    var roleExist = await _roleManager.RoleExistsAsync(roleName);
-                    if (!roleExist)
-                    {
-                        roleResult = await _roleManager.CreateAsync(new IdentityRole<Guid>(roleName));
-                    }
-                }
-
                 var user = new ApplicationUser
                 {
                     UserName = parameters.UserName,
@@ -143,12 +115,11 @@ namespace BlazorBoilerplate.Server.Controllers
                 var result = await _userManager.CreateAsync(user, parameters.Password);
                 if (!result.Succeeded)
                 {
-                    return new ApiResponse(400, "Register User Failed: " +  result.Errors.FirstOrDefault()?.Description);
+                    return new ApiResponse(400, "Register User Failed: " + result.Errors.FirstOrDefault()?.Description);
                 }
-
-
-                //Role - Here we tie the new user to the "Admin" role
-                await _userManager.AddToRoleAsync(user, "Admin");
+                
+                //Role - Here we tie the new user to the "User" role
+                await _userManager.AddToRoleAsync(user, "User");
 
                 if (Convert.ToBoolean(_configuration["BlazorBoilerplate:RequireConfirmedEmail"] ?? "false"))
                 {
@@ -400,23 +371,331 @@ namespace BlazorBoilerplate.Server.Controllers
 
             return new ApiResponse(200, "User Updated Successfully");
         }
+        
 
+        ///----------Admin User Management Interface Methods
+        
+        [Authorize(Policy = Policies.IsAdmin)]
+        // POST: api/Account/Create
+        [HttpPost("Create")]
+        public async Task<ApiResponse> Create(RegisterDto parameters)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return new ApiResponse(400, "User Model is Invalid");
+                }
 
-        [Authorize]
+                var user = new ApplicationUser
+                {
+                    UserName = parameters.UserName,
+                    Email = parameters.Email
+                };
+
+                user.UserName = parameters.UserName;
+                var result = await _userManager.CreateAsync(user, parameters.Password);
+                if (!result.Succeeded)
+                {
+                    return new ApiResponse(400, "Register User Failed: " + result.Errors.FirstOrDefault()?.Description);
+                }
+
+                //Role - Here we tie the new user to the "Admin" role
+                await _userManager.AddToRoleAsync(user, "Admin");
+
+                if (Convert.ToBoolean(_configuration["BlazorBoilerplate:RequireConfirmedEmail"] ?? "false"))
+                {
+                    #region New  User Confirmation Email
+                    try
+                    {
+                        // For more information on how to enable account confirmation and password reset please visit http://go.microsoft.com/fwlink/?LinkID=532713
+                        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                        string callbackUrl = string.Format("{0}/Account/ConfirmEmail/{1}?token={2}", _configuration["BlazorBoilerplate:ApplicationUrl"], user.Id, token);
+
+                        var email = new EmailMessageDto();
+                        email.ToAddresses.Add(new EmailAddressDto(user.Email, user.Email));
+                        email = EmailTemplates.BuildNewUserConfirmationEmail(email, user.UserName, user.Email, callbackUrl, user.Id.ToString(), token); //Replace First UserName with Name if you want to add name to Registration Form
+
+                        _logger.LogInformation("New user created: {0}", user);
+                        await _emailService.SendEmailAsync(email);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogInformation("New user email failed: {0}", ex.Message);
+                    }
+                    #endregion
+                    return new ApiResponse(200, "Create User Success");
+                }
+
+                #region New  User Email
+                try
+                {
+                    var email = new EmailMessageDto();
+                    email.ToAddresses.Add(new EmailAddressDto(user.Email, user.Email));
+                    email = EmailTemplates.BuildNewUserEmail(email, user.UserName, user.Email, parameters.Password); //Replace First UserName with Name if you want to add name to Registration Form
+
+                    _logger.LogInformation("New user created: {0}", user);
+                    await _emailService.SendEmailAsync(email);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogInformation("New user email failed: {0}", ex.Message);
+                }
+                #endregion
+
+                UserInfoDto userInfo = new UserInfoDto
+                {
+                    IsAuthenticated = false,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    //ExposedClaims = user.Claims.ToDictionary(c => c.Type, c => c.Value),
+                    Roles = new List<string> { "User" }
+                };
+
+                return new ApiResponse(200, "Created New User", userInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Create User Failed: {0}", ex.Message);
+                return new ApiResponse(400, "Create User Failed");
+            }
+        }
+
+        [Authorize(Policy = Policies.IsAdmin)]
         // DELETE: api/Account/5
         [HttpDelete("{id}")]
         public async Task<ApiResponse> Delete(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
-            if (user == null)
+            if (user.Id == null)
             {
                 return new ApiResponse(404, "User does not exist");
             }
+            try
+            {
+                //EF: not a fan this will delete old ApiLogs
+                var apiLogs = _db.ApiLogs.Where(a => a.ApplicationUserId == user.Id);
+                foreach (var apiLog in apiLogs)
+                {
+                    _db.ApiLogs.Remove(apiLog);
+                }
+                _db.SaveChanges();
 
-            await _userManager.DeleteAsync(user);
-
-            return new ApiResponse(200, "User Deletion Successful");
+                await _userManager.DeleteAsync(user);
+                return new ApiResponse(200, "User Deletion Successful");
+            }
+            catch
+            {
+                return new ApiResponse(400, "User Deletion Failed");                
+            }            
+        }
+        
+        [HttpGet("GetUser")]
+        [Authorize]
+        public ApiResponse GetUser()
+        {
+            UserInfoDto userInfo = User != null && User.Identity.IsAuthenticated
+                ? new UserInfoDto { UserName = User.Identity.Name, IsAuthenticated = true }
+                : LoggedOutUser;
+            return new ApiResponse(200, "Get User Successful", userInfo);
         }
 
+        [Authorize(Policy = Policies.IsAdmin)]
+        [HttpGet]
+        public async Task<ApiResponse> Get([FromQuery] int pageSize, [FromQuery] int pageNumber = 0)
+        {
+
+            var userDtoList = new List<UserInfoDto>();
+            List<ApplicationUser> listResponse;
+
+            if (pageSize == null || pageSize == 0)
+            {
+                return new ApiResponse(400, "page size input empty");
+            }
+
+            // get paginated list of users
+            try
+            {
+                var userList = _userManager.Users.AsQueryable();
+                listResponse = userList.OrderBy(x => x.Id).Skip(pageNumber * pageSize).Take(pageSize).ToList();
+
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(null, ex);
+            }
+
+            // create the dto object with mapped properties and fetch roles associated with each user
+            try
+            {
+                foreach (var applicationUser in listResponse)
+                {
+                    userDtoList.Add(new UserInfoDto
+                    {
+                        FirstName = applicationUser.FirstName,
+                        LastName = applicationUser.LastName,
+                        UserName = applicationUser.UserName,
+                        Email = applicationUser.Email,
+                        UserId = applicationUser.Id,
+                        Roles = (List<string>)(await _userManager.GetRolesAsync(applicationUser).ConfigureAwait(true))
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(null, ex);
+            }
+
+            return new ApiResponse(200, "User list fetched", userDtoList);
+        }
+
+        [HttpGet("ListRoles")]
+        [Authorize(Policy = Policies.IsAdmin)]
+        public async Task<ApiResponse> ListRoles()
+        {
+            var roleList = _roleManager.Roles.Select(x => x.Name).ToList();
+            return new ApiResponse(200, "", roleList);
+        }
+
+        [HttpPost]
+        [Authorize(Policy = Policies.IsAdmin)]
+        public async Task<ApiResponse> Update([FromBody] UserInfoDto userInfo)
+        {
+            // retrieve full user object for updating
+            var appUser = await _userManager.FindByIdAsync(userInfo.UserId.ToString()).ConfigureAwait(true);
+            
+            //update values
+            appUser.UserName = userInfo.UserName;
+            appUser.FirstName = userInfo.FirstName;
+            appUser.LastName = userInfo.LastName;
+            appUser.Email = userInfo.Email;
+                                          
+            try
+            {
+                var result = await _userManager.UpdateAsync(appUser).ConfigureAwait(true);
+            }
+            catch
+            {
+                return new ApiResponse(500, "Error Updating User");
+            }
+
+            if (userInfo.Roles != null)
+            {
+                try
+                {
+                    List<string> rolesToAdd = new List<string>();
+                    List<string> rolesToRemove = new List<string>();
+                    var currentUserRoles = (List<string>)(await _userManager.GetRolesAsync(appUser).ConfigureAwait(true));
+                    foreach (var newUserRole in userInfo.Roles)
+                    {
+                        if (!currentUserRoles.Contains(newUserRole))
+                        {
+                            rolesToAdd.Add(newUserRole);
+                        }
+                    }
+                    await _userManager.AddToRolesAsync(appUser, rolesToAdd).ConfigureAwait(true);
+
+                    foreach (var role in currentUserRoles)
+                    {
+                        if (!userInfo.Roles.Contains(role))
+                        {
+                            rolesToRemove.Add(role);
+                        }
+                    }
+                    await _userManager.RemoveFromRolesAsync(appUser, rolesToRemove).ConfigureAwait(true);
+                }
+                catch
+                {
+                    return new ApiResponse(500, "Error Updating Roles");
+                }
+            }
+            return new ApiResponse(200, "User Updated");
+        }
+
+        [HttpPost("AddUserRoleGlobal")]
+        [Authorize(Policy = Policies.IsAdmin)]
+        public async Task<ApiResponse> AddUserRoletoAppAsync([FromBody] string newRole)
+        {
+            // first make sure the role doesn't already exist
+            if (_roleManager.Roles.Any(r => r.Name == newRole))
+            {
+                return new ApiResponse(400, "role already exists");
+            }
+            else
+            {
+                try
+                {
+                    _roleManager.CreateAsync(new IdentityRole<Guid>(newRole)).Wait();
+                    return new ApiResponse(200);
+                }
+                catch (Exception ex)
+                {
+                    return new ApiResponse(500, ex.Message);
+                }
+            }
+        }
+
+        [HttpPost("AdminUserPasswordReset/{id}")]
+        [Authorize(Policy = Policies.IsAdmin)]
+        [ProducesResponseType(204)]
+        public async Task<ApiResponse> AdminResetUserPasswordAsync(Guid id, [FromBody] string newPassword)
+        {
+            ApplicationUser user;
+
+            if (!ModelState.IsValid)
+            {
+                return new ApiResponse(400, "Model is Invalid");
+            }
+
+            try
+            {
+                user = await _userManager.FindByIdAsync(id.ToString());
+                if (user.Id == null)
+                {
+                    throw new KeyNotFoundException();
+                }
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return new ApiResponse(400, "Unable to find user" + ex.Message);
+            }
+            try
+            {
+                var passToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, passToken, newPassword);
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation(user.UserName + "'s password reset; Requested from Admin interface by:" + User.Identity.Name);
+                    return new ApiResponse(204, user.UserName + " password reset");
+                }
+                else
+                {
+                    _logger.LogInformation(user.UserName + "'s password reset failed; Requested from Admin interface by:" + User.Identity.Name);
+
+                    // this is going to an authenticated Admin so it should be safe/useful to send back raw error messages
+                    if (result.Errors.Any())
+                    {
+                        string resultErrorsString = "";
+                        foreach (var identityError in result.Errors)
+                        {
+                            resultErrorsString += identityError.Description + ", ";
+                        }
+                        resultErrorsString.TrimEnd(',');                        
+                        return new ApiResponse(400, resultErrorsString);
+                    }
+                    else
+                    {
+                        throw new Exception();
+                    }
+                }
+            }
+            catch (Exception ex) // not sure if failed password reset result will throw an exception
+            {
+                _logger.LogInformation(user.UserName + "'s password reset failed; Requested from Admin interface by:" + User.Identity.Name);
+                return new ApiResponse(400, ex.Message);
+            }            
+        }
     }
 }

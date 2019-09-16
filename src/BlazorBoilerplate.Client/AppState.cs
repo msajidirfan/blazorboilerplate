@@ -35,13 +35,13 @@ namespace BlazorBoilerplate.Client
         public bool IsNavMinified { get; set; }
 
         public async Task UpdateUserProfile()
-        {     
+        {
             await _userProfileApi.Upsert(UserProfile);
         }
 
         public async Task<UserProfileDto> GetUserProfile()
         {
-            if (UserProfile != null)
+            if (UserProfile != null && UserProfile.UserId != Guid.Empty)
             {
                 return UserProfile;
             }

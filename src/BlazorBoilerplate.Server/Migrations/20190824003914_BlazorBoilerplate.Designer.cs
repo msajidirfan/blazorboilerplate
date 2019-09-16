@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BlazorBoilerplate.Server.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20190821081011_Boilerplate")]
-    partial class Boilerplate
+    [Migration("20190824003914_BlazorBoilerplate")]
+    partial class BlazorBoilerplate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -192,9 +192,6 @@ namespace BlazorBoilerplate.Server.Migrations
                         .HasColumnType("bigint")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<Guid>("ApplicationUserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int>("Count")
                         .HasColumnType("int");
 
@@ -210,9 +207,13 @@ namespace BlazorBoilerplate.Server.Migrations
                     b.Property<DateTime>("LastUpdatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ApplicationUserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("UserProfiles");
                 });
@@ -348,16 +349,16 @@ namespace BlazorBoilerplate.Server.Migrations
 
             modelBuilder.Entity("BlazorBoilerplate.Server.Models.ApiLogItem", b =>
                 {
-                    b.HasOne("BlazorBoilerplate.Server.Models.ApplicationUser", "ApplicationUser")
-                        .WithMany()
+                    b.HasOne("BlazorBoilerplate.Server.Models.ApplicationUser", null)
+                        .WithMany("ApiLogItems")
                         .HasForeignKey("ApplicationUserId");
                 });
 
             modelBuilder.Entity("BlazorBoilerplate.Server.Models.UserProfile", b =>
                 {
                     b.HasOne("BlazorBoilerplate.Server.Models.ApplicationUser", "ApplicationUser")
-                        .WithMany()
-                        .HasForeignKey("ApplicationUserId")
+                        .WithOne("Profile")
+                        .HasForeignKey("BlazorBoilerplate.Server.Models.UserProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -3,11 +3,13 @@ using BlazorBoilerplate.Server.Middleware.Wrappers;
 using BlazorBoilerplate.Server.Models;
 using BlazorBoilerplate.Server.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -28,16 +30,17 @@ namespace BlazorBoilerplate.Server.Middleware
         private IApiLogService _apiLogService;
         private readonly Func<object, Task> _clearCacheHeadersDelegate;
         private readonly bool _enableAPILogging;
+        private List<string> _ignorePaths = new List<string>();
 
- 
-        public APIResponseRequestLogginMiddleware(RequestDelegate next, bool enableAPILogging)
+        public APIResponseRequestLogginMiddleware(RequestDelegate next, bool enableAPILogging, IConfiguration configuration)
         {
             _next = next;
             _enableAPILogging = enableAPILogging;
             _clearCacheHeadersDelegate = ClearCacheHeaders;
+            _ignorePaths = configuration.GetSection("BlazorBoilerplate:ApiLogging:IgnorePaths").Get<List<string>>();
         }
 
-        public async Task Invoke(HttpContext httpContext, IApiLogService apiLogService, ILogger<APIResponseRequestLogginMiddleware> logger)
+        public async Task Invoke(HttpContext httpContext, IApiLogService apiLogService, ILogger<APIResponseRequestLogginMiddleware> logger, UserManager<ApplicationUser> userManager)
         {
             _logger = logger;
             _apiLogService = apiLogService;
@@ -86,37 +89,37 @@ namespace BlazorBoilerplate.Server.Middleware
                             }
 
                             #region Log Request / Response
-                            if (_enableAPILogging)
+                            //Search the Ignore paths from appsettings to ignore the loggin of certian api paths
+                            if (_enableAPILogging && (_ignorePaths.Any(e => !request.Path.StartsWithSegments(new PathString(e.ToLower())))))
                             {
-                                stopWatch.Stop();
-                                await responseBody.CopyToAsync(originalBodyStream);
-
-                                Guid userId = Guid.Empty;
                                 try
                                 {
-                                    userId = httpContext.User.Identity.IsAuthenticated
-                                            ? new Guid(httpContext.User.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).First().Value)
-                                            : Guid.Empty;
+                                    stopWatch.Stop();
+                                    await responseBody.CopyToAsync(originalBodyStream);
+
+                                    ApplicationUser user = httpContext.User.Identity.IsAuthenticated
+                                            ? await userManager.FindByIdAsync(httpContext.User.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).First().Value)
+                                            : null;
+
+                                await SafeLog(requestTime,
+                                    stopWatch.ElapsedMilliseconds,
+                                    response.StatusCode,
+                                    request.Method,
+                                    request.Path,
+                                    request.QueryString.ToString(),
+                                    requestBodyContent,
+                                    responseBodyContent,
+                                    httpContext.Connection.RemoteIpAddress.ToString(),
+                                    user
+                                    );
                                 }
                                 catch { }
-
-                                //await SafeLog(requestTime,
-                                //    stopWatch.ElapsedMilliseconds,
-                                //    response.StatusCode,
-                                //    request.Method,
-                                //    request.Path,
-                                //    request.QueryString.ToString(),
-                                //    requestBodyContent,
-                                //    responseBodyContent,
-                                //    httpContext.Connection.RemoteIpAddress.ToString(),
-                                //    userId
-                                //    );
                             }
                             #endregion
                         }
                         catch (System.Exception ex)
                         {
-                            
+
                             _logger.LogWarning("An Inner Middleware exception occurred: " + ex.Message);
                             await HandleExceptionAsync(httpContext, ex);
                         }
@@ -231,9 +234,9 @@ namespace BlazorBoilerplate.Server.Middleware
             else
             {
                 bodyText = body.ToString();
-               // return httpContext.Response.WriteAsync(bodyText);
             }
 
+            //TODO Review the code below as it might not be necessary
             dynamic bodyContent = JsonConvert.DeserializeObject<dynamic>(bodyText);
             Type type = bodyContent?.GetType();
 
@@ -241,7 +244,7 @@ namespace BlazorBoilerplate.Server.Middleware
             if (type.Equals(typeof(Newtonsoft.Json.Linq.JObject)))
             {
                 apiResponse = JsonConvert.DeserializeObject<ApiResponse>(bodyText);
-                if (apiResponse.StatusCode != code)
+                if (apiResponse.StatusCode == 0)
                 {
                     apiResponse.StatusCode = code;
                 }
@@ -273,7 +276,7 @@ namespace BlazorBoilerplate.Server.Middleware
             return plainBodyText;
         }
 
-        // TODO Review Getting a info from VS over the Disposable of the StreamReader
+        //TODO VS Studio Info / Warining message over the Disposable of the StreamReader
         //private async Task<string> FormatResponse(HttpResponse response)
         //{
         //    using (StreamReader reader = new StreamReader(response.Body))
@@ -299,7 +302,7 @@ namespace BlazorBoilerplate.Server.Middleware
                             string requestBody,
                             string responseBody,
                             string ipAddress,
-                            Guid userId)
+                            ApplicationUser user)
         {
             // Do not log these events login, logout, getuserinfo...
             if ((path.ToLower().StartsWith("/api/account/")) ||
@@ -344,9 +347,9 @@ namespace BlazorBoilerplate.Server.Middleware
                 QueryString = queryString,
                 RequestBody = requestBody,
                 ResponseBody = responseBody,
-                IPAddress = ipAddress
-
-            }, userId);
+                IPAddress = ipAddress,
+                ApplicationUserId = user == null ? Guid.Empty : user.Id
+            });
         }
 
         private Task ClearCacheHeaders(object state)

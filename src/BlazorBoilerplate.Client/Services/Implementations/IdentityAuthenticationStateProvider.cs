@@ -1,11 +1,11 @@
-﻿using System;
+﻿using BlazorBoilerplate.Client.Services.Contracts;
+using BlazorBoilerplate.Shared.Dto;
+using Microsoft.AspNetCore.Components.Authorization;
+using System;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Components;
-using BlazorBoilerplate.Client.Services.Contracts;
-using BlazorBoilerplate.Shared.Dto;
 
 namespace BlazorBoilerplate.Client.States
 {
@@ -30,6 +30,12 @@ namespace BlazorBoilerplate.Client.States
         {
             ApiResponseDto apiResponse = await _authorizeApi.Register(registerParameters);
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+            return apiResponse;
+        }
+
+        public async Task<ApiResponseDto> Create(RegisterDto registerParameters)
+        {            
+            ApiResponseDto apiResponse = await _authorizeApi.Create(registerParameters);
             return apiResponse;
         }
 

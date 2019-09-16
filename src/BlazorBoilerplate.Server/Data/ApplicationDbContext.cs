@@ -1,4 +1,5 @@
-﻿using BlazorBoilerplate.Server.Data.Interfaces;
+﻿using BlazorBoilerplate.Server.Data.Configurations;
+using BlazorBoilerplate.Server.Data.Interfaces;
 using BlazorBoilerplate.Server.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -17,45 +18,45 @@ namespace BlazorBoilerplate.Server.Data
         public DbSet<ApiLogItem> ApiLogs { get; set; }
         public DbSet<UserProfile> UserProfiles { get; set; }
         public DbSet<Todo> Todos { get; set; }
+        public DbSet<Message> Messages { get; set; }
 
-        private readonly IUserSession _userSession;
+        private IUserSession _userSession { get; set; }
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)  
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         { }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IUserSession userSession) : base(options)
         {
             _userSession = userSession;
-        }       
+        }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             base.OnConfiguring(optionsBuilder);
         }
-        
-        protected override void OnModelCreating(ModelBuilder builder)
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            builder.ShadowProperties();
+            //Fluent API Does not follow foreign key naming convention
+            modelBuilder.Entity<ApplicationUser>()
+                .HasOne(a => a.Profile)
+                .WithOne(b => b.ApplicationUser)
+                .HasForeignKey<UserProfile>(b => b.UserId);
 
-            base.OnModelCreating(builder);
+            modelBuilder.ShadowProperties();
 
-            SetGlobalQueryFilters(builder);
+            base.OnModelCreating(modelBuilder);
             // Customize the ASP.NET Identity model and override the defaults if needed.
             // For example, you can rename the ASP.NET Identity table names and more.
             // Add your customizations after calling base.OnModelCreating(builder);
+            modelBuilder.Entity<Message>().ToTable("Messages");
 
-            //builder.Entity<UserProfile>(entity =>
-            //{
-            //    // Set key for entity
-            //    entity.HasKey(p => p.Id);
-            //});
+            modelBuilder.ApplyConfiguration(new MessageConfiguration());
 
-
-            //builder.Entity<ApiLogItem>(entity =>
-            //{
-            //    // Set key for entity
-            //    entity.HasKey(li => li.Id);
-            //});
+            SetGlobalQueryFilters(modelBuilder);
+            // Customize the ASP.NET Identity model and override the defaults if needed.
+            // For example, you can rename the ASP.NET Identity table names and more.
+            // Add your customizations after calling base.OnModelCreating(builder);
         }
 
         private void SetGlobalQueryFilters(ModelBuilder modelBuilder)
@@ -70,7 +71,7 @@ namespace BlazorBoilerplate.Server.Data
                     //TODO future for Tenant
                     //if (typeof(ITenantEntity).IsAssignableFrom(t))
                     //{
-                    //    // softdeletable and tenant (note do not filter just ITenant - too much filtering! 
+                    //    // softdeletable and tenant (note do not filter just ITenant - too much filtering!
                     //    // just top level classes that have ITenantEntity
                     //    var method = SetGlobalQueryForSoftDeleteAndTenantMethodInfo.MakeGenericMethod(t);
                     //    method.Invoke(this, new object[] { modelBuilder });
@@ -109,10 +110,10 @@ namespace BlazorBoilerplate.Server.Data
             return base.SaveChanges();
         }
 
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = new CancellationToken())
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             ChangeTracker.SetShadowProperties(_userSession);
-            return await base.SaveChangesAsync(cancellationToken);
+            return await base.SaveChangesAsync(true, cancellationToken);
         }
     }
 }

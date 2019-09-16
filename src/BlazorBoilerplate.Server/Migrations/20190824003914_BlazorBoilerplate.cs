@@ -4,10 +4,29 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace BlazorBoilerplate.Server.Migrations
 {
-    public partial class Boilerplate : Migration
+    public partial class BlazorBoilerplate : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        {        
+            migrationBuilder.CreateTable(
+                name: "Todos",
+                columns: table => new
+                {
+                    Id = table.Column<long>(nullable: false)
+                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
+                    Title = table.Column<string>(maxLength: 128, nullable: false),
+                    IsCompleted = table.Column<bool>(nullable: false),
+                    CreatedBy = table.Column<Guid>(nullable: false),
+                    CreatedOn = table.Column<DateTime>(nullable: false, defaultValueSql: "GetUtcDate()"),
+                    IsDeleted = table.Column<bool>(nullable: false),
+                    ModifiedBy = table.Column<Guid>(nullable: false),
+                    ModifiedOn = table.Column<DateTime>(nullable: false, defaultValueSql: "GetUtcDate()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Todos", x => x.Id);
+                });
+     
             migrationBuilder.CreateTable(
                 name: "ApiLogs",
                 columns: table => new
@@ -36,24 +55,7 @@ namespace BlazorBoilerplate.Server.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "Todos",
-                columns: table => new
-                {
-                    Id = table.Column<long>(nullable: false)
-                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
-                    Title = table.Column<string>(maxLength: 128, nullable: false),
-                    IsCompleted = table.Column<bool>(nullable: false),
-                    CreatedBy = table.Column<Guid>(nullable: false),
-                    CreatedOn = table.Column<DateTime>(nullable: false, defaultValueSql: "GetUtcDate()"),
-                    IsDeleted = table.Column<bool>(nullable: false),
-                    ModifiedBy = table.Column<Guid>(nullable: false),
-                    ModifiedOn = table.Column<DateTime>(nullable: false, defaultValueSql: "GetUtcDate()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Todos", x => x.Id);
-                });
+        
 
             migrationBuilder.CreateTable(
                 name: "UserProfiles",
@@ -61,7 +63,7 @@ namespace BlazorBoilerplate.Server.Migrations
                 {
                     Id = table.Column<long>(nullable: false)
                         .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
-                    ApplicationUserId = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
                     LastPageVisited = table.Column<string>(nullable: true),
                     IsNavOpen = table.Column<bool>(nullable: false),
                     IsNavMinified = table.Column<bool>(nullable: false),
@@ -72,8 +74,8 @@ namespace BlazorBoilerplate.Server.Migrations
                 {
                     table.PrimaryKey("PK_UserProfiles", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_UserProfiles_AspNetUsers_ApplicationUserId",
-                        column: x => x.ApplicationUserId,
+                        name: "FK_UserProfiles_AspNetUsers_UserId",
+                        column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -85,9 +87,10 @@ namespace BlazorBoilerplate.Server.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserProfiles_ApplicationUserId",
+                name: "IX_UserProfiles_UserId",
                 table: "UserProfiles",
-                column: "ApplicationUserId");
+                column: "UserId",
+                unique: true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

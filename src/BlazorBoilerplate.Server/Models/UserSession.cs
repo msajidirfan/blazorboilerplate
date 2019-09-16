@@ -1,8 +1,6 @@
 ﻿using BlazorBoilerplate.Server.Data.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace BlazorBoilerplate.Server.Models
 {
@@ -18,5 +16,13 @@ namespace BlazorBoilerplate.Server.Models
         public List<string> Roles { get; set; }
         public Dictionary<string, string> ExposedClaims { get; set; }
         public bool DisableTenantFilter { get; set; }
+
+        public UserSession() {}
+
+        public UserSession(ApplicationUser user)
+        {
+            UserId = user.Id;
+            UserName = user.UserName;
+        }
     }
 }

@@ -24,7 +24,6 @@ namespace BlazorBoilerplate.Server.Models
         [MaxLength(2048)]
         public string Path { get; set; }
 
-
         [MaxLength(2048)]
         public string QueryString { get; set; }
 
@@ -37,6 +36,6 @@ namespace BlazorBoilerplate.Server.Models
         [MaxLength(45)]
         public string IPAddress { get; set; }
 
-        public ApplicationUser ApplicationUser { get; set; }
+        public Guid? ApplicationUserId { get; set; }
     }
 }

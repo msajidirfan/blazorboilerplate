@@ -1,27 +1,29 @@
-using System;
-using System.Net;
-using System.Linq;
-using System.Threading.Tasks;
+using AutoMapper;
+using BlazorBoilerplate.Server.Authorization;
+using BlazorBoilerplate.Server.Data;
+using BlazorBoilerplate.Server.Data.Interfaces;
+using BlazorBoilerplate.Server.Data.Mapping;
+using BlazorBoilerplate.Server.Helpers;
+using BlazorBoilerplate.Server.Middleware;
+using BlazorBoilerplate.Server.Models;
+using BlazorBoilerplate.Server.Services;
+using BlazorBoilerplate.Shared.AuthorizationDefinitions;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.Extensions.Configuration;
-using BlazorBoilerplate.Server.Data;
-using BlazorBoilerplate.Server.Models;
-using BlazorBoilerplate.Server.Services;
-using BlazorBoilerplate.Server.Authorization;
-using BlazorBoilerplate.Server.Helpers;
-using BlazorBoilerplate.Server.Middleware;
-using BlazorBoilerplate.Server.Data.Mapping;
-using AutoMapper;
-using Microsoft.AspNetCore.Http;
-using BlazorBoilerplate.Server.Data.Interfaces;
+using System;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace BlazorBoilerplate.Server
 {
@@ -41,14 +43,14 @@ namespace BlazorBoilerplate.Server
             services.AddDbContext<ApplicationDbContext>(options => {
                 if (Convert.ToBoolean(Configuration["BlazorBoilerplate:UseSqlServer"] ?? "false"))
                 {
-                    options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")); //SQL Server Database                    
+                    options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")); //SQL Server Database
                 }
                 else
                 {
                     options.UseSqlite($"Filename={Configuration.GetConnectionString("SqlLiteConnectionFileName")}");  // Sql Lite / file database
                 }
             });
-            
+
             services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
                 .AddRoles<IdentityRole<Guid>>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -62,9 +64,14 @@ namespace BlazorBoilerplate.Server
             //Add Policies / Claims / Authorization - https://stormpath.com/blog/tutorial-policy-based-authorization-asp-net-core
             services.AddAuthorization(options =>
             {
-                options.AddPolicy("RequireElevatedRights", policy => policy.RequireRole("SuperAdmin", "Admin"));
-                options.AddPolicy("ReadOnly", policy => policy.RequireClaim("ReadOnly", "true"));
+                options.AddPolicy(Policies.IsAdmin, Policies.IsAdminPolicy());
+                options.AddPolicy(Policies.IsUser, Policies.IsUserPolicy());
+                options.AddPolicy(Policies.IsReadOnly, Policies.IsReadOnlyPolicy());
+                options.AddPolicy(Policies.IsMyDomain, Policies.IsMyDomainPolicy());  // valid only on serverside operations
             });
+
+            services.AddTransient<IAuthorizationHandler, DomainRequirementHandler>();
+
 
             services.Configure<IdentityOptions>(options =>
             {
@@ -114,12 +121,13 @@ namespace BlazorBoilerplate.Server
             });
 
             services.AddControllers().AddNewtonsoftJson();
+            services.AddSignalR();
 
             services.AddSwaggerDocument(config =>
             {
                 config.PostProcess = document =>
                 {
-                    document.Info.Version     = "v0.2.0";
+                    document.Info.Version     = "v0.2.2";
                     document.Info.Title       = "Blazor Boilerplate";
                     document.Info.Description = "Blazor Boilerplate / Starter Template using the  (ASP.NET Core Hosted) (dotnet new blazorhosted) model. Hosted by an ASP.NET Core server";
                 };
@@ -131,12 +139,15 @@ namespace BlazorBoilerplate.Server
                     new[] { "application/octet-stream" });
             });
 
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddScoped<IUserSession, UserSession>();
             services.AddSingleton<IEmailConfiguration>(Configuration.GetSection("EmailConfiguration").Get<EmailConfiguration>());
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<IUserProfileService, UserProfileService>();
             services.AddTransient<IApiLogService, ApiLogService>();
             services.AddTransient<ITodoService, ToDoService>();
+            services.AddTransient<IMessageService, MessageService>();
+            services.AddTransient<IApplicationDbContextSeed, ApplicationDbContextSeed>();
 
             // AutoMapper Configurations
             var mappingConfig = new MapperConfiguration(mc =>
@@ -157,7 +168,7 @@ namespace BlazorBoilerplate.Server
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IApplicationDbContextSeed applicationDbContextSeed)
         {
             EmailTemplates.Initialize(env);
             using (var serviceScope = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>().CreateScope())
@@ -170,8 +181,8 @@ namespace BlazorBoilerplate.Server
             app.UseMiddleware<UserSessionMiddleware>();
             // A REST API global exception handler and response wrapper for a consistent API
             // Configure API Loggin in appsettings.json - Logs most API calls. Great for debugging and user activity audits
-            app.UseMiddleware<APIResponseRequestLogginMiddleware>(Convert.ToBoolean(Configuration["BlazorBoilerplate:EnableAPILogging"] ?? "true"));
-             
+            app.UseMiddleware<APIResponseRequestLogginMiddleware>(Convert.ToBoolean(Configuration["BlazorBoilerplate:EnableAPILogging:Enabled"] ?? "true"));
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -183,6 +194,7 @@ namespace BlazorBoilerplate.Server
             //    app.UseHsts(); //HSTS Middleware (UseHsts) to send HTTP Strict Transport Security Protocol (HSTS) headers to clients.
             //}
 
+            //app.UseStaticFiles();
             app.UseClientSideBlazorFiles<Client.Startup>();
 
             //app.UseHttpsRedirection();
@@ -197,9 +209,13 @@ namespace BlazorBoilerplate.Server
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapDefaultControllerRoute();
+                // new SignalR endpoint routing setup
+                endpoints.MapHub<Hubs.ChatHub>("/chathub");
                 endpoints.MapFallbackToClientSideBlazor<Client.Startup>("index.html");
             });
-        }
 
+            //Seed Database
+            applicationDbContextSeed.SeedDb();
+        }
     }
 }

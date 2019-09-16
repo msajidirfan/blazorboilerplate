@@ -144,6 +144,34 @@ namespace BlazorBoilerplate.Server.Migrations
                     b.ToTable("AspNetUsers");
                 });
 
+            modelBuilder.Entity("BlazorBoilerplate.Server.Models.Message", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("When")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("Messages");
+                });
+
             modelBuilder.Entity("BlazorBoilerplate.Server.Models.Todo", b =>
                 {
                     b.Property<long>("Id")
@@ -190,9 +218,6 @@ namespace BlazorBoilerplate.Server.Migrations
                         .HasColumnType("bigint")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<Guid>("ApplicationUserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int>("Count")
                         .HasColumnType("int");
 
@@ -208,9 +233,13 @@ namespace BlazorBoilerplate.Server.Migrations
                     b.Property<DateTime>("LastUpdatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ApplicationUserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("UserProfiles");
                 });
@@ -346,16 +375,25 @@ namespace BlazorBoilerplate.Server.Migrations
 
             modelBuilder.Entity("BlazorBoilerplate.Server.Models.ApiLogItem", b =>
                 {
-                    b.HasOne("BlazorBoilerplate.Server.Models.ApplicationUser", "ApplicationUser")
-                        .WithMany()
+                    b.HasOne("BlazorBoilerplate.Server.Models.ApplicationUser", null)
+                        .WithMany("ApiLogItems")
                         .HasForeignKey("ApplicationUserId");
+                });
+
+            modelBuilder.Entity("BlazorBoilerplate.Server.Models.Message", b =>
+                {
+                    b.HasOne("BlazorBoilerplate.Server.Models.ApplicationUser", "Sender")
+                        .WithMany("Messages")
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("BlazorBoilerplate.Server.Models.UserProfile", b =>
                 {
                     b.HasOne("BlazorBoilerplate.Server.Models.ApplicationUser", "ApplicationUser")
-                        .WithMany()
-                        .HasForeignKey("ApplicationUserId")
+                        .WithOne("Profile")
+                        .HasForeignKey("BlazorBoilerplate.Server.Models.UserProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

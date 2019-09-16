@@ -27,3 +27,12 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/src/Dockerfile'
         tags: |
           $(tag)
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'github-docker-blazor'
+        repository: '$(Build.SourcesDirectory)/src'
+        command: 'buildAndPush'
+        Dockerfile: '$(Build.SourcesDirectory)/src/Dockerfile'
+        tags: |
+          $(Build.BuildId)
+          latest

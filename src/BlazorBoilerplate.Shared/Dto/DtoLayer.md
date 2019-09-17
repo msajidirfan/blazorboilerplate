@@ -10,7 +10,7 @@ DTO is simple class i.e. only getter setter. There is no business logic in it.
 
 The majority of applications are using DTOs for passing the data from one layer to another. They are light-weight and are very useful. I have just summarized the information I have got. Please have a look at the below references.
 
-If Blazor Boilerplate in the future implements GraphQL this will alter the need for the Dto layer.
+If SNP Nucleus in the future implements GraphQL this will alter the need for the Dto layer.
 
 References
 https://www.c-sharpcorner.com/blogs/introduction-to-data-transfer-object

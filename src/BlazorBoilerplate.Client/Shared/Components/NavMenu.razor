@@ -2,13 +2,75 @@
 @inject NavigationManager navigationManager
 
     <MatNavMenu Multi="true" Class="app-sidebar">
-        <MatNavItem Href="@navigationManager.ToAbsoluteUri(" ").AbsoluteUri">
-            <MatIcon>home</MatIcon> <span class="miniHover">Home page</span>
+        <MatNavItem Href="@navigationManager.ToAbsoluteUri("dashboard").AbsoluteUri">
+            <MatIcon>bar_chart</MatIcon> <span class="miniHover">Dashboard</span>
         </MatNavItem>
 
-        <MatNavItem Href="@navigationManager.ToAbsoluteUri("todo_list").AbsoluteUri">
-            <MatIcon>list_alt</MatIcon> <span class="miniHover">Todo List</span>
+
+        <MatNavSubMenu>
+            <MatNavSubMenuHeader>
+                <MatNavItem AllowSelection="false">
+                    <MatIcon>stars</MatIcon><span class="miniHover"> Discovery</span>
+                </MatNavItem>
+            </MatNavSubMenuHeader>
+            <MatNavSubMenuList>
+                <MatNavItem Href="@navigationManager.ToAbsoluteUri("questionnaire").AbsoluteUri">
+                    <MatIcon>change_history</MatIcon> <span class="miniHover">Questionnaire</span>
+                </MatNavItem>
+                <MatNavItem Href="@navigationManager.ToAbsoluteUri("reports").AbsoluteUri">
+                    <MatIcon>touch_app</MatIcon> <span class="miniHover">Reports</span>
+                </MatNavItem>
+                <MatNavItem Href="@navigationManager.ToAbsoluteUri("responses").AbsoluteUri">
+                    <MatIcon>change_history</MatIcon> <span class="miniHover">Responses</span>
+                </MatNavItem>
+            </MatNavSubMenuList>
+        </MatNavSubMenu>
+
+        <MatNavSubMenu>
+            <MatNavSubMenuHeader>
+                <MatNavItem AllowSelection="false" Disabled="@(!IsLoggedIn)">
+                    <MatIcon>mail_outline</MatIcon>
+                    <span class="miniHover">Assessment</span>
+                </MatNavItem>
+            </MatNavSubMenuHeader>
+            <MatNavSubMenuList>
+                <MatNavItem Href="@navigationManager.ToAbsoluteUri("readassessment").AbsoluteUri" Disabled="@(!IsLoggedIn)">
+                    <MatIcon>inbox</MatIcon> <span class="miniHover">Read Assessment</span>
+                </MatNavItem>
+                <MatNavItem Href="@navigationManager.ToAbsoluteUri("sendassessment").AbsoluteUri" Disabled="@(!IsLoggedIn)">
+                    <MatIcon>send</MatIcon> <span class="miniHover">Send Assessment</span>
+                </MatNavItem>
+            </MatNavSubMenuList>
+        </MatNavSubMenu>
+
+        <MatNavItem Href="@navigationManager.ToAbsoluteUri("blueprint").AbsoluteUri" Disabled="@(!IsLoggedIn)">
+            <MatIcon>supervisor_account</MatIcon> <span class="miniHover">Blueprint</span>
         </MatNavItem>
+
+        <MatNavItem Href="@navigationManager.ToAbsoluteUri("resourcegraphs").AbsoluteUri">
+            <MatIcon>attach_money</MatIcon> <span class="miniHover">Resource Graphs</span>
+        </MatNavItem>
+
+        <MatNavItem Href="@navigationManager.ToAbsoluteUri("offerings").AbsoluteUri">
+            <MatIcon>attach_money</MatIcon> <span class="miniHover">Offerings</span>
+        </MatNavItem>
+
+        <MatNavSubMenu>
+            <MatNavSubMenuHeader>
+                <MatNavItem AllowSelection="false" Disabled="@(!IsLoggedIn)">
+                    <MatIcon>supervisor_account</MatIcon>
+                    <span class="miniHover"> Admin</span>
+                </MatNavItem>
+            </MatNavSubMenuHeader>
+            <MatNavSubMenuList>
+                <MatNavItem Href="@navigationManager.ToAbsoluteUri("admin/users").AbsoluteUri" Disabled="@(!IsLoggedIn)">
+                    <MatIcon>supervisor_account</MatIcon> <span class="miniHover">Users</span>
+                </MatNavItem>
+                <MatNavItem Href="@navigationManager.ToAbsoluteUri("admin/customers").AbsoluteUri">
+                    <MatIcon>supervisor_account</MatIcon> <span class="miniHover">Customers</span>
+                </MatNavItem>
+            </MatNavSubMenuList>
+        </MatNavSubMenu>
 
         <MatNavSubMenu>
             <MatNavSubMenuHeader>
@@ -16,7 +78,7 @@
                     <MatIcon>stars</MatIcon><span class="miniHover"> Features</span>
                 </MatNavItem>
             </MatNavSubMenuHeader>
-            <MatNavSubMenuList>                
+            <MatNavSubMenuList>
                 <MatNavItem Href="@navigationManager.ToAbsoluteUri("drag_and_drop").AbsoluteUri">
                     <MatIcon>touch_app</MatIcon> <span class="miniHover">Drag and Drop</span>
                 </MatNavItem>
@@ -29,8 +91,8 @@
             </MatNavSubMenuList>
         </MatNavSubMenu>
 
-        <MatNavItem Href="@navigationManager.ToAbsoluteUri("dashboard").AbsoluteUri" Disabled="@(!IsLoggedIn)">
-            <MatIcon>bar_chart</MatIcon> <span class="miniHover">Dashboard</span>
+        <MatNavItem Href="@navigationManager.ToAbsoluteUri("todo_list").AbsoluteUri">
+            <MatIcon>list_alt</MatIcon> <span class="miniHover">Todo List</span>
         </MatNavItem>
 
         <MatNavSubMenu>
@@ -50,16 +112,8 @@
             </MatNavSubMenuList>
         </MatNavSubMenu>
 
-        <MatNavItem Href="@navigationManager.ToAbsoluteUri("admin/users").AbsoluteUri" Disabled="@(!IsLoggedIn)">
-            <MatIcon>supervisor_account</MatIcon> <span class="miniHover">Users</span>
-        </MatNavItem>
-
         <MatNavItem Href="@navigationManager.ToAbsoluteUri("forum").AbsoluteUri" Disabled="@(!IsLoggedIn)">
             <MatIcon>forum</MatIcon> <span class="miniHover">Forum</span>
-        </MatNavItem>
-
-        <MatNavItem Href="@navigationManager.ToAbsoluteUri("sponsors").AbsoluteUri">
-            <MatIcon>attach_money</MatIcon> <span class="miniHover">Sponsors</span>
         </MatNavItem>
     </MatNavMenu>
 

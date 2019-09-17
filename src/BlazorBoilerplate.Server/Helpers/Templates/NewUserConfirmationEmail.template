@@ -1,6 +1,6 @@
 ﻿<div>
   <h1>
-    <img style="width:100px; vertical-align: middle;" src="https://blazorboilerplate.com/images/logo.png" alt="Blazor Boilerplate"/> Blazor Boilerplate
+    <img style="width:100px; vertical-align: middle;" src="https://blazorboilerplate.com/images/logo.png" alt="SNP Nucleus"/> SNP Nucleus
   </h1>
   <p>Hello {userName},</p>
   <p>
@@ -10,5 +10,5 @@
     <strong>UserId:</strong> {userId}<br />
     <strong>Token:</strong> {token}<br/>
   </p>
-  <p>Thank you, and welcome to the Blazor Boilerplate</p>
+  <p>Thank you, and welcome to the SNP Nucleus</p>
 </div>

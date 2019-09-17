@@ -12,8 +12,8 @@
     <Version>0.2.2</Version>
     <Authors>Keith Fimreite</Authors>
     <Company>EnkodeLLC</Company>
-    <Title>Blazor Boilerplate Client</Title>
-    <Description>Blazor Boilerplate is starter kit / SPA Admin Template for Blazor</Description>
+    <Title>SNP Nucleus Client</Title>
+    <Description>SNP Nucleus is starter kit / SPA Admin Template for Blazor</Description>
     <WebPage>https://blazorboilerplate.com/</WebPage>
     <PackageProjectUrl>https://blazorboilerplate.com/</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>

@@ -1,14 +1,7 @@
-﻿@page "/dashboard"
+﻿@page "/counter"
 @attribute [Authorize]
 @inject AppState appState
 
-<h1>Dashboard</h1>
-
-<p>
-    Expecting to see a bunch of flashy charts then you download the repo and delete them all because you don't need them? <br />
-    Check out <a href="https://github.com/Joelius300/ChartJSBlazor" target="_blank">https://github.com/Joelius300/ChartJSBlazor</a> and you will find a great resource for animated charts for a dashboard.<br />
-</p>
-<hr />
 <h2>Counter</h2>
 
 <MatFAB icon="exposure_plus_1" @onclick="@IncrementCount"></MatFAB>
@@ -20,7 +13,7 @@
 </p>
 
 <p>
-    There is a "User Profile" for persistant user data built into Blazor Boilerplate. This is a bit of hack until Microsoft or others create that functionality.
+    There is a "User Profile" for persistant user data built into SNP Nucleus. This is a bit of hack until Microsoft or others create that functionality.
     Currently we store Sidebar Navigation settings, Count. In the future I would like to track the users last page but I don't see much for <br/>
 </p>
 

@@ -78,12 +78,12 @@ namespace BlazorBoilerplate.Server.Data
                     new Todo
                     {
                         IsCompleted = false,
-                        Title = "Test Blazor Boilerplate"
+                        Title = "Test SNP Nucleus"
                     },
                     new Todo
                     {
                         IsCompleted = false,
-                        Title = "Test Blazor Boilerplate 1",
+                        Title = "Test SNP Nucleus 1",
                     }
                 );
 

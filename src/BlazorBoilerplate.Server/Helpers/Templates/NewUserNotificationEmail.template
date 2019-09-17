@@ -1,6 +1,6 @@
 ﻿<div>
   <h1>
-    <img style="width:100px; vertical-align: middle;" src="https://blazorboilerplate.com/images/logo.png" alt="Blazor Boilerplate"/> Blazor Boilerplate
+    <img style="width:100px; vertical-align: middle;" src="https://blazorboilerplate.com/images/logo.png" alt="SNP Nucleus"/> SNP Nucleus
   </h1>
   <p>Hello {name},</p>
   <p>
@@ -18,5 +18,5 @@
     <br />
   </p>
   <p>Regards,</p>
-  <p>Blazor Boilerplate Team</p>
+  <p>SNP Nucleus Team</p>
 </div>

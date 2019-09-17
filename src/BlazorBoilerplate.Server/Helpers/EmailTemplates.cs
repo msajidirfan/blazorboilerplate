@@ -32,7 +32,7 @@ namespace BlazorBoilerplate.Server.Helpers
                 .Replace("{user}", emailMessage.ToAddresses[0].Name)
                 .Replace("{testDate}", DateTime.Now.ToString());
 
-              emailMessage.Subject = string.Format("Hello {0} from Blazor Boilerplate", emailMessage.ToAddresses[0].Name);
+              emailMessage.Subject = string.Format("Hello {0} from SNP Nucleus", emailMessage.ToAddresses[0].Name);
 
           return emailMessage;
         }
@@ -60,7 +60,7 @@ namespace BlazorBoilerplate.Server.Helpers
                 .Replace("{userId}", userId)
                 .Replace("{token}", token);
 
-            emailMessage.Subject = string.Format("Welcome {0} to Blazor Boilerplate", recepientName);
+            emailMessage.Subject = string.Format("Welcome {0} to SNP Nucleus", recepientName);
 
             return emailMessage;
         }
@@ -74,7 +74,7 @@ namespace BlazorBoilerplate.Server.Helpers
                 .Replace("{userName}", userName)
                 .Replace("{password}", password);
 
-            emailMessage.Subject = string.Format("Welcome {0} to Blazor Boilerplate", recepientName);
+            emailMessage.Subject = string.Format("Welcome {0} to SNP Nucleus", recepientName);
 
             return emailMessage;
         }
@@ -91,7 +91,7 @@ namespace BlazorBoilerplate.Server.Helpers
                 .Replace("{roles}", roles)
                 .Replace("{company}", company);
 
-            emailMessage.Subject = string.Format("A new user [{0}] has registered on Blazor Boilerplate", userName);
+            emailMessage.Subject = string.Format("A new user [{0}] has registered on SNP Nucleus", userName);
 
             return emailMessage;
         }
@@ -105,7 +105,7 @@ namespace BlazorBoilerplate.Server.Helpers
                 .Replace("{token}", token)
                 .Replace("{callbackUrl}", callbackUrl);
 
-            emailMessage.Subject = string.Format("Blazor Boilerplate Forgot your Passord? [{0}]", name);
+            emailMessage.Subject = string.Format("SNP Nucleus Forgot your Passord? [{0}]", name);
 
             return emailMessage;
         }
@@ -117,7 +117,7 @@ namespace BlazorBoilerplate.Server.Helpers
             emailMessage.Body = passwordResetTemplate
                 .Replace("{userName}", userName);
 
-            emailMessage.Subject = string.Format("Blazor Boilerplate Password Reset for {0}", userName);
+            emailMessage.Subject = string.Format("SNP Nucleus Password Reset for {0}", userName);
 
             return emailMessage;
         }

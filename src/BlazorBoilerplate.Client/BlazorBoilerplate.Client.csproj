@@ -36,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Pages\Discovery\QuestionnaireTemplate\" />
     <Folder Include="wwwroot\fonts\fontawesome\" />
     <Folder Include="wwwroot\javascript\" />
   </ItemGroup>

@@ -11,6 +11,7 @@ using BlazorBoilerplate.Shared.AuthorizationDefinitions;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -23,6 +24,7 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace BlazorBoilerplate.Server
@@ -146,8 +148,32 @@ namespace BlazorBoilerplate.Server
             services.AddTransient<IUserProfileService, UserProfileService>();
             services.AddTransient<IApiLogService, ApiLogService>();
             services.AddTransient<ITodoService, ToDoService>();
+            services.AddTransient<IQuestionnaireService, QuestionnaireService>();
             services.AddTransient<IMessageService, MessageService>();
             services.AddTransient<IApplicationDbContextSeed, ApplicationDbContextSeed>();
+
+            // Setup HttpClient for server side in a client side compatible fashion
+            services.AddScoped<HttpClient>(s =>
+            {
+                // Creating the URI helper needs to wait until the JS Runtime is initialized, so defer it.
+                var uriHelper = s.GetRequiredService<NavigationManager>();
+                return new HttpClient
+                {
+                    BaseAddress = new Uri(uriHelper.BaseUri)
+                };
+            });
+
+
+            //Implementing session
+            // Adds a default in-memory implementation of IDistributedCache.
+            services.AddDistributedMemoryCache();
+
+            services.AddSession(options =>
+            {
+                // Set a short timeout for easy testing.
+                options.IdleTimeout = TimeSpan.FromSeconds(300);
+                options.Cookie.HttpOnly = true;
+            });
 
             // AutoMapper Configurations
             var mappingConfig = new MapperConfiguration(mc =>
@@ -201,6 +227,8 @@ namespace BlazorBoilerplate.Server
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.UseSession();
 
             // NSwag
             app.UseOpenApi();

@@ -1,0 +1,22 @@
+﻿@page "/runquestionnaire/{questionnaireId}"
+@inject IJSRuntime JSRuntime
+
+<h1>Run</h1>
+
+<NavLink class="nav-link" href="questionnaire">
+    <span class="oi oi-list-rich" aria-hidden="true"></span> Back to Discovery
+</NavLink>
+<div id="surveyElement"></div>
+<div id="surveyResult"></div>
+
+
+@code {
+    [Parameter] public string questionnaireId { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JSRuntime.InvokeAsync<object>(
+        "surveyRunFunctions.runSurvey", questionnaireId);
+    }
+
+}

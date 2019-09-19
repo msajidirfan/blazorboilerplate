@@ -1,3 +1,179 @@
 ﻿@page "/questionnaire"
+@*@attribute [Authorize] Uncomment to Secure this page*@
+@inject NavigationManager navigationManager
+@inject HttpClient Http
+@inject IMatToaster matToaster
 
-<h1>Q</h1>
+<h1>Questionnaire List - CRUD</h1>
+<p>
+    This Questionnaire List demonstrates fetching data from the server and CRUD for Blazor with .NET Core API server. This example unlike most is implemented with persistent data using N-Tier design patterns.
+    Check out the <a href="https://github.com/enkodellc/blazorboilerplate" target="_blank">repository to view the source.</a> If you find this helpful please contribute or <a href="https://www.paypal.me/enkodellc">donate</a> to support further development.
+</p>
+
+<MatButton Icon="playlist_add" Label="New Questionnaire" OnClick="@((e) => OpenDialog())" Raised="true"></MatButton>
+<br />
+<MatTable Class="mat-elevation-z5" Items="@questionnaires" LoadInitialData="true" Striped="true" FilterByColumnName="Title" DebounceMilliseconds="150" PageSize="10">
+    <MatTableHeader>
+        <th></th>
+        <th>Id</th>
+        <th style="min-width:180px;">Questionnaire</th>
+        <th>Actions</th>
+    </MatTableHeader>
+    <MatTableRow Context="QuestionnaireRow">
+        <td>
+            <div style="width:50px;">
+                <MatIconButton Icon="delete" OnClick="@(() => OpenDeleteDialog(QuestionnaireRow))"></MatIconButton>
+            </div>
+        </td>
+        <td>1</td>
+        @*<td><MatCheckbox Checked="true" class="filled-in chk-col-blue" ></MatCheckbox></td>*@
+        <td>@QuestionnaireRow</td>
+        <td>
+            <MatButton Icon="playlist_add" Label="Run" OnClick="@((e) => NavigateTo("runquestionnaire/" + QuestionnaireRow))" Raised="true"></MatButton>
+            <MatButton Icon="playlist_add" Label="Edit" OnClick="@((e) => NavigateTo("editquestionnaire/" + QuestionnaireRow))" Raised="true"></MatButton>
+            <MatButton Icon="playlist_add" Label="Result" OnClick="@((e) => NavigateTo("resultsquestionnaire/" + QuestionnaireRow))" Raised="true"></MatButton>
+
+        </td>
+    </MatTableRow>
+</MatTable>
+
+<MatDialog @bind-IsOpen="@dialogIsOpen">
+    <MatDialogTitle>Create Questionnaire</MatDialogTitle>
+    <MatDialogContent>
+        <fieldset>
+            <div class="form-group">
+                <MatTextField @bind-Value="@questionnaire" Label="Title" Icon="title" IconTrailing="true" FullWidth="true" Required="true"></MatTextField>
+            </div>
+            @*<div class="form-group">
+                    <MatCheckbox @bind-Checked="false" Label="Completed"></MatCheckbox>
+                </div>*@
+        </fieldset>
+    </MatDialogContent>
+    <MatDialogActions>
+        <MatButton OnClick="@(e => { dialogIsOpen = false; })">Cancel</MatButton>
+        <MatButton OnClick="@CreateQuestionnaire">Create Questionnaire</MatButton>
+    </MatDialogActions>
+</MatDialog>
+
+<MatDialog @bind-IsOpen="@deleteDialogOpen" Style="z-index:100">
+    <MatDialogTitle><MatIcon Icon="warning"></MatIcon> Confirm Delete</MatDialogTitle>
+    <MatDialogContent>
+        Are you sure you want to delete questionnaire "@questionnaire" ?
+    </MatDialogContent>
+    <MatDialogActions>
+        <MatButton OnClick="@(e => { deleteDialogOpen = false; })">Cancel</MatButton>
+        <MatButton OnClick="@Delete">Delete</MatButton>
+    </MatDialogActions>
+</MatDialog>
+
+@code {
+    bool deleteDialogOpen = false;
+    bool dialogIsOpen = false;
+    List<string> questionnaires = new List<string>();
+    string questionnaire { get; set; } = "";
+    private string runQuestionnaireNavLink { get; set; }// = "runquestionnaire/" + @questionnaire.Key;
+
+    //List<QuestionnaireDto> questionnaires = new List<QuestionnaireDto>();
+    //QuestionnaireDto questionnaire { get; set; } = new QuestionnaireDto();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ApiResponseDto apiResponse = await Http.GetJsonAsync<ApiResponseDto>("api/service/getActive");
+
+        if (apiResponse.StatusCode == 200)
+        {
+            matToaster.Add(apiResponse.Message, MatToastType.Success, "Questionnaire List Retrieved");
+            questionnaires = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(apiResponse.Result.ToString()).ToList<string>();
+        }
+        else
+        {
+            matToaster.Add(apiResponse.Message + " : " + apiResponse.StatusCode, MatToastType.Danger, "Questionnaire List Retrieval Failed");
+        }
+    }
+
+
+    public async Task Save(string questionnaire)
+    {
+        try
+        {
+            //questionnaire.IsCompleted = !questionnaire.IsCompleted;
+            //ApiResponseDto apiResponse = await Http.PostJsonAsync<ApiResponseDto>("api/service", questionnaire);
+
+            //if (apiResponse.StatusCode == 200)
+            //{
+            //    matToaster.Add(apiResponse.Message, MatToastType.Success);
+            //}
+            //else
+            //{
+            //    matToaster.Add(apiResponse.Message + " : " + apiResponse.StatusCode, MatToastType.Danger, "Questionnaire Save Failed");
+            //}
+        }
+        catch (Exception ex)
+        {
+            matToaster.Add(ex.Message, MatToastType.Danger, "Questionnaire Save Failed");
+        }
+    }
+
+    public async Task Delete()
+    {
+        try
+        {
+            var response = await Http.DeleteAsync("api/service/delete" + questionnaire);
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                matToaster.Add("Questionnaire Deleted", MatToastType.Success);
+                questionnaires.Remove(questionnaire);
+            }
+            else
+            {
+                matToaster.Add("Questionnaire Delete Failed", MatToastType.Danger);
+            }
+            deleteDialogOpen = false;
+            questionnaire = ""; //reset questionnaire after delete
+        }
+        catch (Exception ex)
+        {
+            matToaster.Add(ex.Message, MatToastType.Danger, "Questionnaire Save Failed");
+        }
+    }
+
+    public void OpenDialog()
+    {
+        dialogIsOpen = true;
+    }
+
+    public void NavigateTo(string path)
+    {
+        navigationManager.NavigateTo(path);
+    }
+
+    public void OpenDeleteDialog(string todoId)
+    {
+        questionnaire = questionnaires.Where(x => x == todoId).FirstOrDefault();
+        this.deleteDialogOpen = true;
+    }
+
+    public async Task CreateQuestionnaire()
+    {
+        dialogIsOpen = false;
+        try
+        {
+            ApiResponseDto apiResponse = await Http.PutJsonAsync<ApiResponseDto>("api/service/create", questionnaire);
+            if (apiResponse.StatusCode == 200)
+            {
+                matToaster.Add(apiResponse.Message, MatToastType.Success);
+                questionnaire = Newtonsoft.Json.JsonConvert.DeserializeObject<string>(apiResponse.Result.ToString());
+                questionnaires.Add(questionnaire);
+                questionnaire = ""; //reset questionnaire after insert
+            }
+            else
+            {
+                matToaster.Add(apiResponse.Message + " : " + apiResponse.StatusCode, MatToastType.Danger, "Questionnaire Creation Failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            matToaster.Add(ex.Message, MatToastType.Danger, "Questionnaire Creation Failed");
+        }
+    }
+}

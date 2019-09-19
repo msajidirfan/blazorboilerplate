@@ -1,3 +1,19 @@
 ﻿@page "/reports"
+@inject IJSRuntime JSRuntime
 
 <h1>Q</h1>
+
+<div id="surveyElement"></div>
+<div id="surveyResult"></div>
+
+
+@code {
+    [Parameter] public string questionnaireId { get; set; } = "1";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JSRuntime.InvokeAsync<object>(
+        "surveyffetchFunctions.fetchSurvey", questionnaireId);
+    }
+
+}
